@@ -3,6 +3,7 @@
 from Crypto import PublicKey
 from Crypto.Hash import SHA
 from Crypto.Util import number
+from Crypto.Signature import PKCS1_v1_5
 
 import binascii, struct, array
 import Crypto.PublicKey.RSA
@@ -34,6 +35,7 @@ print 'coa', ''.join('{:02x}'.format(ord(x)) for x in coaBytes)
 
 # A 12 byte serial number (though the endianness is different when stored in the C code - see px_uploader.py)
 serialStr = "002700303133470539343031"
+#serialStr = "300027000547333131303439" # Is the endianness swapped?
 serialSplit = [serialStr[i:i+2] for i in range(0, len(serialStr), 2)]
 print "nums", serialSplit
 serialNums = map(lambda b: int(b, 16), serialSplit)
@@ -49,13 +51,22 @@ print "pubkey len", len(pubKey)
 with open('3dr_priv.pem') as f:
    prvKeyData = f.read()
 
-hash = SHA.new(coaBytes).digest()
-print "hash len", len(hash)
+hash = SHA.new(serialNum)
 
 prvKey = PublicKey.RSA.importKey(prvKeyData)
 #pub = prvKey.publickey()
 pub = PublicKey.RSA.importKey(pubKey)
 
-longSignature = number.bytes_to_long(serialNum)
-print "long", longSignature
-print 'VERIFY:', pub.verify(hash, (longSignature, None))
+#longSignature = number.bytes_to_long(serialNum)
+#print "long", longSignature
+# print 'VERIFY:', pub.verify(hash, (longSignature, None))
+
+signer = PKCS1_v1_5.new(prvKey)
+myNewCOA = SHA.new(serialNum)
+mySign = signer.sign(myNewCOA)
+print "mysign len", len(mySign)
+
+# FIXME - the following fails to parse a coa from the px4 on my desk
+verifier = PKCS1_v1_5.new(pub)
+print 'VERIFY mine:', verifier.verify(hash, mySign)
+print 'VERIFY theirs:', verifier.verify(hash, coaBytes)
