@@ -4,6 +4,7 @@ from Crypto import PublicKey
 from Crypto.Hash import SHA
 from Crypto.Util import number
 from Crypto.Signature import PKCS1_v1_5
+from base64 import b64decode
 
 import binascii, struct, array
 import Crypto.PublicKey.RSA
@@ -31,7 +32,7 @@ sn: 002700303133470539343031
 
 coaBase64 = "MpbJEVbGos2dRyvXaOdK2ccx1DuRgKmU+bknUX5BQlpSB/5YQt2bzSfyB3dZypdykjNOjDZpafN5fvqqaUCtAMAZDxhUEOX9E9zls3uPgDCrhOH6HAJgiOse5LIk+2YrqACoEQqVbFX+Q2mPpYTpodf4sQSV40YMHeaBwMe4mHU="
 coaBytes = binascii.a2b_base64(coaBase64)
-print 'coa', ''.join('{:02x}'.format(ord(x)) for x in coaBytes)
+print 'coa', len(coaBytes), ''.join('{:02x}'.format(ord(x)) for x in coaBytes)
 
 # A 12 byte serial number (though the endianness is different when stored in the C code - see px_uploader.py)
 serialStr = "002700303133470539343031"
@@ -41,14 +42,13 @@ print "nums", serialSplit
 serialNums = map(lambda b: int(b, 16), serialSplit)
 serialNums.extend([ 0,0,0,0,0,0,0,0]) # pad to 20 bytes
 print "asarray", serialNums
-serialNum = array.array('B', serialNums).tostring() # FIXME - need to reverse? [::-1]
-print 'asstr', ' '.join('{:02x}'.format(ord(x)) for x in serialNum)
+serialNum = array.array('B', serialNums).tostring()
+print 'asstr', len(serialNum), ' '.join('{:02x}'.format(ord(x)) for x in serialNum)
 
 with open('3dr_pub.pem') as f:
    pubKey = f.read()
-print "pubkey len", len(pubKey)
 
-with open('3dr_priv.pem') as f:
+with open('3dr_priv2.pem') as f:
    prvKeyData = f.read()
 
 hash = SHA.new(serialNum)
@@ -56,15 +56,17 @@ hash = SHA.new(serialNum)
 prvKey = PublicKey.RSA.importKey(prvKeyData)
 #pub = prvKey.publickey()
 pub = PublicKey.RSA.importKey(pubKey)
-
-#longSignature = number.bytes_to_long(serialNum)
-#print "long", longSignature
-# print 'VERIFY:', pub.verify(hash, (longSignature, None))
+print "pubkey", pub.size()
 
 signer = PKCS1_v1_5.new(prvKey)
 myNewCOA = SHA.new(serialNum)
 mySign = signer.sign(myNewCOA)
 print "mysign len", len(mySign)
+
+# raw also fails
+mySignRaw = prvKey.sign(myNewCOA.digest(), 0)
+print 'VERIFY mine raw:', pub.verify(hash.digest(), mySignRaw)
+print 'VERIFY theirs raw:', pub.verify(hash.digest(), (number.bytes_to_long(coaBytes), None))
 
 # FIXME - the following fails to parse a coa from the px4 on my desk
 verifier = PKCS1_v1_5.new(pub)
