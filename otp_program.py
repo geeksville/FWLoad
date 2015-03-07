@@ -30,12 +30,17 @@ coa: MpbJEVbGos2dRyvXaOdK2ccx1DuRgKmU+bknUX5BQlpSB/5YQt2bzSfyB3dZypdykjNOjDZpafN
 sn: 002700303133470539343031
 """
 
+#my new pixhawk
+#coaBase64 = "6THB5OYpfbDIqtHaAI+196sdM1t2oP6Ix8SzXtyNMpEyyA/uy2L/1UieOrJO8Q5Wvx4mWkMMrUS4zGv9+slB41sVIdVv4nTlRCNojQm4yr2ebcEuR04Ttnkl9WUMIIOXf8Bsjj43qIpb2VFiC2kjBIHMbVdy7JqzNExDPxrUcQU="
+#serialStr = "002e001b3433470d32323630"
+
+# my pixhawk
 coaBase64 = "MpbJEVbGos2dRyvXaOdK2ccx1DuRgKmU+bknUX5BQlpSB/5YQt2bzSfyB3dZypdykjNOjDZpafN5fvqqaUCtAMAZDxhUEOX9E9zls3uPgDCrhOH6HAJgiOse5LIk+2YrqACoEQqVbFX+Q2mPpYTpodf4sQSV40YMHeaBwMe4mHU="
+serialStr = "002700303133470539343031"
+
 coaBytes = binascii.a2b_base64(coaBase64)
 print 'coa', len(coaBytes), ''.join('{:02x}'.format(ord(x)) for x in coaBytes)
 
-# A 12 byte serial number (though the endianness is different when stored in the C code - see px_uploader.py)
-serialStr = "002700303133470539343031"
 #serialStr = "300027000547333131303439" # Is the endianness swapped?
 serialSplit = [serialStr[i:i+2] for i in range(0, len(serialStr), 2)]
 print "nums", serialSplit
@@ -45,7 +50,7 @@ print "asarray", serialNums
 serialNum = array.array('B', serialNums).tostring()
 print 'asstr', len(serialNum), ' '.join('{:02x}'.format(ord(x)) for x in serialNum)
 
-with open('3dr_pub.pem') as f:
+with open('3dr_pub2.pem') as f:
    pubKey = f.read()
 
 with open('3dr_priv2.pem') as f:
@@ -58,14 +63,14 @@ prvKey = PublicKey.RSA.importKey(prvKeyData)
 pub = PublicKey.RSA.importKey(pubKey)
 print "pubkey", pub.size()
 
-signer = PKCS1_v1_5.new(prvKey)
 myNewCOA = SHA.new(serialNum)
+
+signer = PKCS1_v1_5.new(prvKey)
 mySign = signer.sign(myNewCOA)
 print "mysign len", len(mySign)
 
 # raw also fails
-mySignRaw = prvKey.sign(myNewCOA.digest(), 0)
-print 'VERIFY mine raw:', pub.verify(hash.digest(), mySignRaw)
+print 'VERIFY mine raw:', pub.verify(hash.digest(), prvKey.sign(myNewCOA.digest(), 0))
 print 'VERIFY theirs raw:', pub.verify(hash.digest(), (number.bytes_to_long(coaBytes), None))
 
 # FIXME - the following fails to parse a coa from the px4 on my desk
