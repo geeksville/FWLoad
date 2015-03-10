@@ -59,9 +59,17 @@ with open('3dr_priv2.pem') as f:
 hash = SHA.new(serialNum)
 
 prvKey = PublicKey.RSA.importKey(prvKeyData)
+print "prvKey", prvKey.size()
+print "n", prvKey.n
+print "e", prvKey.e
+print "d", prvKey.d
+print "p", prvKey.p
+
 #pub = prvKey.publickey()
 pub = PublicKey.RSA.importKey(pubKey)
 print "pubkey", pub.size()
+print "n", pub.n
+print "e", pub.e
 
 myNewCOA = SHA.new(serialNum)
 
